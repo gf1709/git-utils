@@ -1,11 +1,10 @@
 Import-Module -Verbose -Name (Resolve-Path  ".\utils.psm1")
-# Import-Module -Verbose -Name (Resolve-Path  "./modules/utils.psm1")
+echo_ok "Starting to list repositories for organization $($orgName)..."
 
 $headers = @{
-    "Authorization" = [String]::Format("Bearer {0}", $script:gitAccessToken)
+    "Authorization" = [String]::Format("Bearer {0}", $gitAccessToken)
     "Content-Type"  = "application/json"
 }
-
 
 # $orgName = "corebanking"
 # $reposAPIUri = "https://github.servizi.allitude.it/api/v3/orgs/$($orgName)/repos"
