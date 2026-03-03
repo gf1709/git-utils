@@ -30,12 +30,48 @@ function Read-Git-Repositories {
     # # # # Write-Host "Output is $($githubRepositories)"
     # # # $githubRepositories | Out-File -FilePath "reposAPIUri.html" -Append -Encoding utf8
     # # # Write-Host "Output is $($githubRepositories)"
+}
+
+function Clone-Git-Repositories {
+    param(
+        [pscustomobject]$repoList 
+    )
+    echo_ok "Creating temporary directory for cloning repositories: $($rootCloneTempDirectory)..."
+    # TODO GREG da ripristinare - I
+    # if (!(Test-Path -Path $rootCloneTempDirectory)) {
+    #     New-Item -ItemType Directory -Path $rootCloneTempDirectory
+    # }
+    # else {
+    #     echo_error "Directory $($rootCloneTempDirectory) already exists. Deleting it..."
+    #     return     
+    # }
+    # TODO GREG da ripristinare - F
+    # $repoList = Read-Git-Repositories
+    echo_ok "Total repositories passed as params: $($repoList.Count)"
+    $idx = 0
+    foreach ($repo in $repoList) {
+        if ($repo.name.StartsWith('.')) {
+            echo_ok($repo.name, "Skipping repository $($repo.name) because it starts with a dot.")
+            continue
+        }        
+        else {
+            $idx += 1
+            echo_ok("[$idx/$($repoList.Count)] Cloning repository $($repo.name) from $($repo.clone_url) to $($rootCloneTempDirectory)\$($repo.name)")
+            git clone $repo.clone_url "$($rootCloneTempDirectory)\$($repo.name)"
+            if ($idx -gt $maxRepos) {
+                break
+            }
+        }
+    }   
 
 }
 
-# Sample Call
+
+# Main program
 $repoList = Read-Git-Repositories
 echo_ok "Total repositories found: $($repoList.Count)"
-foreach ($repo in $repoList) {
-    echo_ok($repo.name)
-}   
+Clone-Git-Repositories -repoList $repoList
+
+# foreach ($repo in $repoList) {
+#     echo_ok($repo.name)
+# }   
