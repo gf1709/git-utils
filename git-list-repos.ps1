@@ -16,13 +16,19 @@ Import-Module -Verbose -Name (Resolve-Path  ".\utils.psm1")
 #######################################################
 
 $curDir = Get-Location
+
+# Lettura dei repository da github tramite API
 $repoList = Read-Git-Repositories
 echo_ok "Total repositories found: $($repoList.Count)"
 
+# Filtraggio dei repository in base al nome
 $repoList = Filter-Git-Repositories -repoList $repoList -repoNameFilter $paramRepoNameFilter
 echo_ok "Total repositories filtered: $($repoList.Count)"
 
+# Clonazione dei repository filtrati
 Clone-Git-Repositories -repoList $repoList
+
+# GREP sui repository clonati
 $matchesFound = Grep-Git-Repositories -repoList $repoList -searchString $paramSearchString -filePathFilter $paramFilePathFilter
 if ($matchesFound.Count -eq 0) {
     echo_ok "No matches found for the search string."
@@ -38,9 +44,3 @@ else {
 }
 
 Set-Location $curDir
-
-# checkout di tutti i branch remoti
-# git branch -r | Select-String -Pattern "->" -NotMatch | Select-String -pattern "^  origin/" | foreach { $_ -replace '^  origin/', '' } | Foreach { git checkout $_ }
-
-# serch in all branches for a string
-# git rev-list --all | git grep --ignore-case -I "string"
