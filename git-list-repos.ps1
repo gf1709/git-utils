@@ -58,20 +58,101 @@ function Clone-Git-Repositories {
             $idx += 1
             echo_ok("[$idx/$($repoList.Count)] Cloning repository $($repo.name) from $($repo.clone_url) to $($rootCloneTempDirectory)\$($repo.name)")
             git clone $repo.clone_url "$($rootCloneTempDirectory)\$($repo.name)"
-            if ($idx -gt $maxRepos) {
-                break
-            }
         }
     }   
+}
+function Filter-Git-Repositories {
+    param(
+        [pscustomobject]$repoList 
+    )
+    echo_ok("Filtering repos...")
+    $filteredRepos = @() # array vuoto per memorizzare i match trovati
+    foreach ($repo in $repoList) {
+        if ($repo.name.StartsWith('.')) {
+            echo_ok($repo.name, "Skipping repository $($repo.name) because it starts with a dot.")
+            continue
+        }        
+        else {
+            if ($repo.name -like "wealth-management*") {
+                echo_ok("Repository $($repo.name) matches the filter criteria.")
+                $filteredRepos += $repo
+            }
+        }
+    }
+    return $filteredRepos
+}
 
+function Grep-Git-Repositories {
+    param(
+        [pscustomobject]$repoList ,
+        [string]$searchString
+    )
+    $matchesFound = New-Object System.Collections.Generic.List[System.String] # array vuoto per memorizzare i match trovati
+    $matchesFound.Clear()
+    foreach ($repo in $repoList) {
+        if ($repo.name.StartsWith('.')) {
+            echo_ok($repo.name, "Skipping repository $($repo.name) because it starts with a dot.")
+            continue
+        }        
+        else {
+            echo_ok("")            
+            echo_ok("Searching for string '$searchString' in repository $($repo.name)...")            
+            Set-Location "$($rootCloneTempDirectory)\$($repo.name)"
+            $curDir = Get-Location
+            $branches = git branch -r | Select-String -Pattern "->" -NotMatch | Select-String -pattern "^  origin/" | ForEach-Object { $_ -replace '^  origin/', '' }
+            $branchIdx = 0
+            foreach ($branch in $branches) {
+                echo_ok("")            
+                echo_ok("Searching for string '$searchString' in repository $($repo.name) and branch $branch...")            
+                echo_ok("[$($branchIdx)/$($branches.Count)] checkout of branch $branch...")
+                $res = git checkout $branch 
+                echo_ok("[$($branchIdx)/$($branches.Count)] pull of branch $branch...")
+                $res = git pull           
+                Get-ChildItem -Path $curDir -Recurse | Select-String -Pattern $searchString -CaseSensitive | ForEach-Object {
+                    $matchInfo = $_
+                    # $filePath = $matchInfo.Path
+                    $filePath = [System.IO.Path]::GetFileName($matchInfo.Path)
+                    $lineNumber = $matchInfo.LineNumber
+                    $lineText = $matchInfo.Line
+                    $matchesFound.Add("$($repo.name):$($branch) $($filePath):$($lineNumber):$($lineText)")
+                }
+                echo_ok("Searching for string '$searchString' in repository $($repo.name) and branch $branch done.")            
+                $branchIdx += 1
+            }
+        }
+    }
+    Set-Location "$($rootCloneTempDirectory)"
+    return $matchesFound
 }
 
 
+
 # Main program
+$curDir = Get-Location
 $repoList = Read-Git-Repositories
 echo_ok "Total repositories found: $($repoList.Count)"
-Clone-Git-Repositories -repoList $repoList
+$repoList = Filter-Git-Repositories -repoList $repoList
+echo_ok "Total repositories filtered: $($repoList.Count)"
 
-# foreach ($repo in $repoList) {
-#     echo_ok($repo.name)
-# }   
+Clone-Git-Repositories -repoList $repoList
+$matchesFound = Grep-Git-Repositories -repoList $repoList -searchString "TKK18R"
+if ($matchesFound.Count -eq 0) {
+    echo_ok "No matches found for the search string."
+}
+else {
+    echo_ok " "
+    echo_ok "=================================================================="
+    echo_ok "Total matches found: $($matchesFound.Count)"
+    echo_ok "=================================================================="
+    foreach ($match in $matchesFound) {
+        echo_ok($match)
+    }   
+}
+
+Set-Location $curDir
+
+# checkout di tutti i branch remoti
+# git branch -r | Select-String -Pattern "->" -NotMatch | Select-String -pattern "^  origin/" | foreach { $_ -replace '^  origin/', '' } | Foreach { git checkout $_ }
+
+# serch in all branches for a string
+# git rev-list --all | git grep --ignore-case -I "string"
