@@ -1,4 +1,5 @@
-# .\git-list-repos.ps1 -paramRepoNameFilter 'wealth-management*' -paramFilePathFilter '*.java' -paramSearchString 'TKK19R'
+# .\git-list-repos.ps1 -RepoNameFilter 'wealth-management*' -FilePathFilter '*.java' -SearchString 'TKK19R' -BranchNameFilter 'dev'
+
 param (    
     [Parameter(Mandatory=$true, HelpMessage = "The search string to use (e.g. 'TKK19R')")]
     [string]$SearchString,
@@ -15,13 +16,13 @@ Import-Module -Name (Resolve-Path  ".\utils.psm1")
 Write-Host " "
 Write-Host "Starting git repository processing..." -ForegroundColor Green
 Write-Host "Search string: " -NoNewline -ForegroundColor Green
-Write-Host $SearchString -BackgroundColor Yellow
+Write-Host $SearchString -BackgroundColor Yellow -ForegroundColor DarkBlue 
 Write-Host "Repository name filter: " -NoNewline -ForegroundColor Green 
-Write-Host $RepoNameFilter -BackgroundColor Yellow
+Write-Host $RepoNameFilter -BackgroundColor Yellow -ForegroundColor DarkBlue
 Write-Host "Branch name filter: " -NoNewline -ForegroundColor Green
-Write-Host $BranchNameFilter -BackgroundColor Yellow
+Write-Host $BranchNameFilter -BackgroundColor Yellow -ForegroundColor DarkBlue
 Write-Host "File path filter: " -NoNewline -ForegroundColor Green
-Write-Host $FilePathFilter -BackgroundColor Yellow
+Write-Host $FilePathFilter -BackgroundColor Yellow -ForegroundColor DarkBlue
 #######################################################
 # Main program
 #######################################################
