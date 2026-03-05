@@ -44,7 +44,7 @@ function Read-Git-Repositories {
 
 function Clone-Git-Repositories {
     param(
-       [Parameter(Mandatory=$true)][pscustomobject]$repoList 
+        [Parameter(Mandatory = $true)][pscustomobject]$repoList 
     )
     echo_ok "Creating temporary directory for cloning repositories: $($rootCloneTempDirectory)..."
     # Cancellazione della directory di destinazione se esiste, altrimenti creazione della directory di destinazione
@@ -74,8 +74,8 @@ function Clone-Git-Repositories {
 }
 function Filter-Git-Repositories {
     param(
-        [Parameter(Mandatory=$true)][pscustomobject]$repoList,
-        [Parameter(Mandatory=$true)][string]$repoNameFilter 
+        [Parameter(Mandatory = $true)][pscustomobject]$repoList,
+        [Parameter(Mandatory = $true)][string]$repoNameFilter 
     )
     echo_ok("Filtering repos...")
     $filteredRepos = @() # array vuoto per memorizzare i match trovati
@@ -96,9 +96,11 @@ function Filter-Git-Repositories {
 
 function Grep-Git-Repositories {
     param(
-        [Parameter(Mandatory=$true)] [pscustomobject]$repoList ,
-        [Parameter(Mandatory=$true)] [string]$searchString,
-        [Parameter(Mandatory=$true)] [string]$filePathFilter
+        [Parameter(Mandatory = $true)] [pscustomobject]$repoList ,
+        [Parameter(Mandatory = $true)] [string]$searchString,
+        [Parameter(Mandatory = $true)] [string]$filePathFilter,
+        [Parameter(Mandatory = $true)] [string]$branchNameFilter
+
     )
     $matchesFound = New-Object System.Collections.Generic.List[System.String] # array vuoto per memorizzare i match trovati
     $matchesFound.Clear()
@@ -115,23 +117,25 @@ function Grep-Git-Repositories {
             $branches = git branch -r | Select-String -Pattern "->" -NotMatch | Select-String -pattern "^  origin/" | ForEach-Object { $_ -replace '^  origin/', '' }
             $branchIdx = 0
             foreach ($branch in $branches) {
-                echo_ok("")            
-                echo_ok("Searching for string '$searchString' in repository $($repo.name) and branch $branch...")            
-                echo_ok("[$($branchIdx)/$($branches.Count)] checkout of branch $branch...")
-                $res = git checkout $branch 
-                echo_ok("[$($branchIdx)/$($branches.Count)] pull of branch $branch...")
-                $res = git pull           
-                $seachFiles = [System.IO.Path]::Combine($curDir, $filePathFilter)
-                Get-ChildItem -Path $seachFiles -Recurse | Select-String -Pattern $searchString -CaseSensitive | ForEach-Object {
-                    $matchInfo = $_
-                    # $filePath = $matchInfo.Path
-                    $filePath = [System.IO.Path]::GetFileName($matchInfo.Path)
-                    $lineNumber = $matchInfo.LineNumber
-                    $lineText = $matchInfo.Line
-                    $matchesFound.Add("$($repo.name):$($branch) $($filePath):$($lineNumber):$($lineText)")
+                if ($branch -like $branchNameFilter -or $branchNameFilter -eq "*") {
+                    echo_ok("")            
+                    echo_ok("Searching for string '$searchString' in repository $($repo.name) and branch $branch...")            
+                    echo_ok("[$($branchIdx)/$($branches.Count)] checkout of branch $branch...")
+                    $res = git checkout $branch 
+                    echo_ok("[$($branchIdx)/$($branches.Count)] pull of branch $branch...")
+                    $res = git pull           
+                    $seachFiles = [System.IO.Path]::Combine($curDir, $filePathFilter)
+                    Get-ChildItem -Path $seachFiles -Recurse | Select-String -Pattern $searchString -CaseSensitive | ForEach-Object {
+                        $matchInfo = $_
+                        # $filePath = $matchInfo.Path
+                        $filePath = [System.IO.Path]::GetFileName($matchInfo.Path)
+                        $lineNumber = $matchInfo.LineNumber
+                        $lineText = $matchInfo.Line
+                        $matchesFound.Add("$($repo.name):$($branch) $($filePath):$($lineNumber):$($lineText)")
+                    }
+                    echo_ok("Searching for string '$searchString' in repository $($repo.name) and branch $branch done.")            
+                    $branchIdx += 1
                 }
-                echo_ok("Searching for string '$searchString' in repository $($repo.name) and branch $branch done.")            
-                $branchIdx += 1
             }
         }
     }
