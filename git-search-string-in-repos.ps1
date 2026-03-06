@@ -1,4 +1,4 @@
-# .\git-list-repos.ps1 -RepoNameFilter 'wealth-management*' -FilePathFilter '*.java' -SearchString 'TKK19R' -BranchNameFilter 'dev'
+# .\git-search-string-in-repos.ps1 -RepoNameFilter 'wealth-management*' -FilePathFilter '*.java' -SearchString 'TKK19R' -BranchNameFilter 'dev'
 
 param (    
     [Parameter(Mandatory=$true, HelpMessage = "The search string to use (e.g. 'TKK19R')")]
