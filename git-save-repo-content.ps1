@@ -1,10 +1,10 @@
-# .\git-save-repo-content -RepoNameFilter 'wealth-management*' -FilePathFilter '*.java' -SearchString 'TKK19R' -BranchNameFilter 'dev'
+# .\git-save-repo-content -RepoNameFilter 'wealth-management*'-BranchNameFilter 'dev'
 
 param (    
     [Parameter(HelpMessage = "The repository name filter to use (e.g. 'wealth-management*')")]
     [string]$RepoNameFilter="wealth-management*",    
     [Parameter(HelpMessage = "The branch name filter to use (e.g. 'dev, master, *')")]
-    [string]$BranchNameFilter="*"
+    [string]$BranchNameFilter="dev"
  )
 
 Import-Module -Name (Resolve-Path  ".\config.psm1")
