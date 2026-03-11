@@ -59,15 +59,13 @@ function Clone-Git-Repositories {
     # TODO GREG da ripristinare - F
     # $repoList = Read-Git-Repositories
     echo_ok "Total repositories passed as params: $($repoList.Count)"
-    $idx = 0
     foreach ($repo in $repoList) {
         if ($repo.name.StartsWith('.')) {
             echo_ok($repo.name, "Skipping repository $($repo.name) because it starts with a dot.")
             continue
         }        
         else {
-            $idx += 1
-            echo_ok("[$idx/$($repoList.Count)] Cloning repository $($repo.name) from $($repo.clone_url) to $($rootCloneTempDirectory)\$($repo.name)")
+            echo_ok("Cloning repository $($repo.name) from $($repo.clone_url) to $($rootCloneTempDirectory)\$($repo.name)")
             git clone $repo.clone_url "$($rootCloneTempDirectory)\$($repo.name)"
         }
     }   
@@ -115,14 +113,13 @@ function Grep-Git-Repositories {
             Set-Location "$($rootCloneTempDirectory)\$($repo.name)"
             $curDir = Get-Location
             $branches = git branch -r | Select-String -Pattern "->" -NotMatch | Select-String -pattern "^  origin/" | ForEach-Object { $_ -replace '^  origin/', '' }
-            $branchIdx = 0
             foreach ($branch in $branches) {
                 if ($branch -like $branchNameFilter -or $branchNameFilter -eq "*") {
                     echo_ok("")            
                     echo_ok("Searching for string '$searchString' in repository $($repo.name) and branch $branch...")            
-                    echo_ok("[$($branchIdx)/$($branches.Count)] checkout of branch $branch...")
+                    echo_ok("checkout of branch $branch...")
                     $res = git checkout $branch 
-                    echo_ok("[$($branchIdx)/$($branches.Count)] pull of branch $branch...")
+                    echo_ok("pull of branch $branch...")
                     $res = git pull           
                     $seachFiles = [System.IO.Path]::Combine($curDir, $filePathFilter)
                     Get-ChildItem -Path $seachFiles -Recurse | Select-String -Pattern $searchString -CaseSensitive | ForEach-Object {
@@ -134,7 +131,6 @@ function Grep-Git-Repositories {
                         $matchesFound.Add("$($repo.name):$($branch) $($filePath):$($lineNumber):$($lineText)")
                     }
                     echo_ok("Searching for string '$searchString' in repository $($repo.name) and branch $branch done.")            
-                    $branchIdx += 1
                 }
             }
         }
@@ -145,7 +141,7 @@ function Grep-Git-Repositories {
 
 # $TextFileExtensions = @(".bat", ".bpmn", ".cfg", ".cmd", ".conf", ".config", ".cs", ".css", ".csv", ".doc", ".fls", ".gitattributes", ".gitignore", ".gitkeep", ".gitmodules", ".h", ".html", ".java", ".js", ".json", ".log", ".lst", ".pom", ".pubxml", ".py", ".pyc", ".pyi", ".qxt", ".scss", ".toml", ".tpl", ".ts", ".tt", ".txt", ".typed", ".wsdl", ".wsuo", ".xml", ".xsd", ".xsl", ".yaml", ".yml");
 
-$TextFileExtensions = @(".bat", ".cfg", ".cmd", ".conf", ".config", ".cs", ".c", ".cpp",".fls", ".h", ".html", ".java", ".js", ".pom", ".py", ".pyc", ".pyi", ".ts");
+$TextFileExtensions = @(".bat", ".cfg", ".cmd", ".conf", ".config", ".cs", ".c", ".cpp", ".fls", ".h", ".html", ".java", ".js", ".pom", ".py", ".pyc", ".pyi", ".ts");
 
 function Is-Text-File {
     param(
@@ -164,6 +160,27 @@ else {
     exit 1
 }
 
+function Get-Output-FileName-Prefix {
+    param (
+        [Parameter(Mandatory = $true)] [pscustomobject]$repoName,
+        [Parameter(Mandatory = $true)] [string]$branchName
+    )
+    # Read all file contents for the branch and save them in a file named $Repo_@_$repo.name-Branch_@_branch-File_@_file.Name
+    $outputFilePath = [System.IO.Path]::Combine($rootCloneTempDirectory, "corebanking_repo_references\")
+    if (!(Test-Path -Path $outputFilePath)) {
+        New-Item -ItemType Directory -Path $outputFilePath
+    }
+    $outputFilePath = [System.IO.Path]::Combine($outputFilePath, "REPO_@_$($repoName)-BRANCH_@_$($branchName)")
+    $outputFilePath = $outputFilePath -replace '\.', '_' -replace '/', '_'                                        
+    # $outputFilePath = $outputFilePath + ".md"
+    
+    # Write-Host "Output file path is $outputFilePath"
+    # if (Test-Path -Path $outputFilePath) {
+    #     Remove-Item -Path $outputFilePath -Force
+    # }                    
+    # echo_ok("Saving content of repository $($repo.name) and branch $branch in file $outputFilePath...")
+    return $outputFilePath    
+}
 
 function Save-Git-Repositories-By-Branch {
     param(
@@ -180,38 +197,25 @@ function Save-Git-Repositories-By-Branch {
         }        
         else {
             echo_ok("")            
-            echo_ok_yellow("Searching for string '$searchString' in repository $($repo.name)...")            
+            echo_ok_yellow("Saving content of repository $($repo.name)")            
             Set-Location "$($rootCloneTempDirectory)\$($repo.name)"
             $curDir = Get-Location
-            $branches = git branch -r | Select-String -Pattern "->" -NotMatch | Select-String -pattern "^  origin/" | ForEach-Object { $_ -replace '^  origin/', '' }
-            $branchIdx = 0
+            $branches = git branch -r | Select-String -Pattern "->" -NotMatch | Select-String -pattern "^  origin/" | ForEach-Object { $_ -replace '^  origin/', '' }            
             foreach ($branch in $branches) {
                 if ($branch -like $branchNameFilter -or $branchNameFilter -eq "*") {
                     echo_ok("")            
-                    echo_ok("[$($branchIdx)/$($branches.Count)] checkout of branch $branch...")
+                    echo_ok("checkout of branch $branch...")
                     $res = git checkout $branch 
-                    echo_ok("[$($branchIdx)/$($branches.Count)] pull of branch $branch...")
+                    echo_ok("pull of branch $branch...")
                     $res = git pull           
-                    # Read all file contents for the branch and save them in a file named $repo.name_$branch.txt
-                    $outputFilePath = [System.IO.Path]::Combine($rootCloneTempDirectory, "repo_content\")
-                    if (!(Test-Path -Path $outputFilePath)) {
-                        New-Item -ItemType Directory -Path $outputFilePath
-                    }
-                    $outputFilePath = [System.IO.Path]::Combine($outputFilePath, "Repo_@_$($repo.name)-----Branch_@_$($branch)")
-                    $outputFilePath = $outputFilePath -replace '\.', '_' -replace '/', '_'                                        
-                    $outputFilePath = $outputFilePath + ".md"
-
-                    Write-Host "Output file path is $outputFilePath"
-                    $filePath = $outputFilePath                    
-                    if (Test-Path -Path $filePath) {
-                        Remove-Item -Path $outputFilePath -Force
-                    }                    
-                    echo_ok("Saving content of repository $($repo.name) and branch $branch in file $outputFilePath...")
-
+                    # Controlla se l'ultimo commit è uguale a quello dell'ultima scansione, in caso affermativo salta la scansione della branch, altrimenti salva l'ultimo commit scansionato per il branch in un file di testo
                     $lastCommit = git log -n 1 --format=oneline
 
                     $previousScanCommitLine = '----------------'
-                    $previousScanCommitFile = [System.IO.Path]::Combine($rootCloneTempDirectory, "last_commit_$($repo.name)_$($branch).txt")
+                    $previousScanCommitFile = $rootCloneTempDirectory + "\last_commit_$($repo.name)_$($branch)"
+                    $previousScanCommitFile = $previousScanCommitFile -replace '\.', '_' -replace '/', '_'    
+                    $previousScanCommitFile += ".txt"
+
                     if (Test-Path -Path $previousScanCommitFile) {
                         $file = new-object System.IO.StreamReader($previousScanCommitFile)
                         $previousScanCommitLine = $file.ReadLine()
@@ -222,10 +226,10 @@ function Save-Git-Repositories-By-Branch {
                     }
                     else {
                         # Salva l'ultimo commit scansionato per il branch in un file di testo
-                        $lastCommit | Out-File -FilePath $previousScanCommitFile -Encoding utf8
+                        Out-File -FilePath $previousScanCommitFile  -InputObject $lastCommit -Encoding utf8
                     }
 
-                    foreach ($file in Get-ChildItem -Path $curDir -Recurse -File) {    
+                    foreach ( $file in Get-ChildItem -Path $curDir -Recurse -File) {    
                         if ($fileToExclude -contains $file.Name) {
                             echo_ok("Skipping file $($file.FullName) because it is in the exclusion list.")
                             continue
@@ -233,23 +237,19 @@ function Save-Git-Repositories-By-Branch {
                         
                         if (Is-Text-File -file $file) {
                             try {           
+                                $outputFilePathPrefix = Get-Output-FileName-Prefix -repoName $repo.name -branchName $branch
+                                $outputFilePath = $outputFilePathPrefix + "-FILE_@_$($file.Name)";
                                 # Forza il risultato in un array usando @(...).                     
                                 $fileContent = @(Get-Content -Path $file.FullName)
                                 if ($fileContent) {
-                                    $i = 0  
-                                    foreach ($line in $fileContent.GetEnumerator()) {
-                                        $fileContent[$i] = "**$($file.Name):** $line"
-                                        $i++
-                                    }
-                                    # "current file is $($file.Name) with lines $($i)" |  out-file -filepath  "C:\Users\fc0382\Documents\Apps\_temp\git-clone\repo_content\ciao.txt" -append
-                                    Add-Content -Path $outputFilePath -Value $fileContent
+                                    Out-File -FilePath $outputFilePath -InputObject $fileContent -Encoding utf8
+                                    # echo_ok("File $($file.FullName) saved in $outputFilePath")
                                 }
                             }
                             catch {
                                 echo_error "Error reading file $($file.FullName): $_"                                   
                             }                            
                         }
-                        $branchIdx += 1
                     }
                 }
             }
